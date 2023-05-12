@@ -1,5 +1,7 @@
 package com.telegram_wb.bot.bot;
 
+import com.telegram_wb.bot.bot.service.BotService;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -11,6 +13,17 @@ public class MyBot extends TelegramLongPollingBot {
 
     private static final String USER_NAME = System.getenv("BOT_USERNAME");
     private static final String TOKEN = System.getenv("BOT_TOKEN");
+
+    private final BotService botService;
+
+    public MyBot(BotService botService) {
+        this.botService = botService;
+    }
+
+    @PostConstruct
+    public void init() {
+        botService.setBot(this);
+    }
 
     @Override
     public String getBotUsername() {
@@ -28,6 +41,7 @@ public class MyBot extends TelegramLongPollingBot {
                 .chatId(update.getMessage().getChatId().toString())
                 .text("Hello World")
                 .build();
+        botService.sendDocument(update.getMessage());
         try {
             execute(message);
         } catch (TelegramApiException e) {
