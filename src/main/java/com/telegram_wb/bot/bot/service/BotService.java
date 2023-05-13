@@ -5,6 +5,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 
 public interface BotService {
 
-    void sendDocument(Message message);
+    void saveDocument(Message message);
+
     void setBot(TelegramLongPollingBot bot);
 }

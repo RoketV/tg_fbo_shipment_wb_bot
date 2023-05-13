@@ -41,7 +41,7 @@ public class MyBot extends TelegramLongPollingBot {
                 .chatId(update.getMessage().getChatId().toString())
                 .text("Hello World")
                 .build();
-        botService.sendDocument(update.getMessage());
+        botService.saveDocument(update.getMessage());
         try {
             execute(message);
         } catch (TelegramApiException e) {

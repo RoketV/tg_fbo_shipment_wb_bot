@@ -1,8 +1,9 @@
 package com.telegram_wb.bot.bot.service;
 
-import com.telegram_wb.bot.document.DocumentService;
+import com.telegram_wb.bot.document.dto.DocumentDto;
+import com.telegram_wb.bot.document.model.BinaryContent;
+import com.telegram_wb.bot.document.service.DocumentService;
 import org.apache.poi.util.IOUtils;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -12,10 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -49,24 +48,27 @@ public class BotServiceImpl implements BotService {
     }
 
     @Override
-    public void sendDocument(Message message) {
+    public void saveDocument(Message message) {
         String fieldId = message.getDocument().getFileId();
         ResponseEntity<String> response = getFilePath(fieldId);
         if (response.getStatusCode().is2xxSuccessful()) {
             URL url = getFileURLFromResponse(response);
+            String fileName = message.getDocument().getFileName();
             byte[] fileBytes = getFileByteArray(url);
-            XSSFWorkbook workbook = createWorkbook(fileBytes);
-            documentService.processDocument(workbook);
-            InputFile file = createInputFile(fileBytes);
-            SendDocument document = SendDocument.builder()
-                    .chatId(message.getChatId())
-                    .document(file)
-                    .build();
-            try {
-                bot.execute(document);
-            } catch (TelegramApiException e) {
-                throw new RuntimeException(e);
-            }
+            BinaryContent binaryContent = new BinaryContent(fileBytes);
+            DocumentDto dto = new DocumentDto(fileName,
+                    binaryContent, fieldId, false);
+            documentService.saveDocument(dto);
+//            InputFile file = createInputFile(fileBytes);
+//            SendDocument document = SendDocument.builder()
+//                    .chatId(message.getChatId())
+//                    .document(file)
+//                    .build();
+//            try {
+//                bot.execute(document);
+//            } catch (TelegramApiException e) {
+//                throw new RuntimeException(e);
+//            }
         }
     }
 
@@ -106,14 +108,6 @@ public class BotServiceImpl implements BotService {
             e.printStackTrace();
         }
         return null;
-    }
-
-    private XSSFWorkbook createWorkbook(byte[] fileBytes) {
-        try (InputStream is = new ByteArrayInputStream(fileBytes)) {
-            return new XSSFWorkbook(is);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private InputFile createInputFile(byte[] fileBytes) {
