@@ -16,8 +16,8 @@
     <description>Bot which helps parsing shipping documents for Wildberries marketplace</description>
     <modules>
         <module>dispatcher</module>
-        <module>rabbitmq-constants</module>
         <module>node</module>
+        <module>rabbitmq-constants</module>
     </modules>
 
     <properties>

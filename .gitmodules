@@ -1,9 +1,0 @@
-[submodule "dispatcher"]
-	path = dispatcher
-	url = .\\dispatcher\\
-[submodule "node"]
-	path = node
-	url = .\\node\\
-[submodule "rabbitmq-constants"]
-	path = rabbitmq-constants
-	url = .\\rabbitmq-constants\\
