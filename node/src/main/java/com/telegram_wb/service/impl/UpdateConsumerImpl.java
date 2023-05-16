@@ -22,8 +22,8 @@ public class UpdateConsumerImpl implements UpdateConsumer {
     @Override
     @RabbitListener(queues = DOCUMENT_MESSAGE)
     public void consumeDocumentUpdate(Update update) {
-        documentService.saveDocument(update);
         log.info("document received by the node from Rabbit");
+        documentService.processDocument(update);
     }
 
     @Override

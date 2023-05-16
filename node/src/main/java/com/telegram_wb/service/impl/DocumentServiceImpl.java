@@ -1,10 +1,12 @@
 package com.telegram_wb.service.impl;
 
+import com.telegram_wb.enums.TypeOfDocument;
 import com.telegram_wb.jpa.BinaryContentJpa;
 import com.telegram_wb.jpa.DocumentJpa;
 import com.telegram_wb.model.BinaryContent;
 import com.telegram_wb.model.Document;
 import com.telegram_wb.service.DocumentService;
+import com.telegram_wb.util.DocumentValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.util.IOUtils;
@@ -44,10 +46,12 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final DocumentJpa documentJpa;
 
+    private final DocumentValidator documentValidator;
+
 
     @Override
     @Transactional
-    public void saveDocument(Update update) {
+    public void processDocument(Update update) {
         Message message = update.getMessage();
         String fieldId = message.getDocument().getFileId();
         ResponseEntity<String> response = getFilePath(fieldId);
@@ -55,12 +59,23 @@ public class DocumentServiceImpl implements DocumentService {
             URL url = getFileURLFromResponse(response);
             String fileName = message.getDocument().getFileName();
             byte[] fileBytes = getFileByteArray(url);
-            BinaryContent binaryContent = new BinaryContent(fileBytes);
-            Document document = new Document(fileName,
-                    binaryContent, fieldId, false);
-            binaryContentJpa.save(binaryContent);
-            documentJpa.save(document);
+            TypeOfDocument type = documentValidator.getDocumentType(fileBytes);
+            switch (type) {
+                case INITIAL_DOCUMENT_WITH_SKU -> {
+                    BinaryContent binaryContent = new BinaryContent(fileBytes);
+                    Document document = new Document(fileName,
+                            binaryContent, fieldId, false);
+                    saveDocument(binaryContent, document);
+                }
+            }
         }
+    }
+
+
+    @Transactional
+    public void saveDocument(BinaryContent binaryContent, Document document) {
+        binaryContentJpa.save(binaryContent);
+        documentJpa.save(document);
     }
 
     private ResponseEntity<String> getFilePath(String fileId) {

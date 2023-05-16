@@ -4,5 +4,5 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 
 public interface DocumentService {
 
-    void saveDocument(Update update);
+    void processDocument(Update update);
 }
