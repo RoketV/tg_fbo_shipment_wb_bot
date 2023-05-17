@@ -13,8 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import static com.telegram_wb.enums.TypeOfDocument.INITIAL_DOCUMENT_WITH_SKU;
-import static com.telegram_wb.enums.TypeOfDocument.NOT_VALID_DOCUMENT;
+import static com.telegram_wb.enums.TypeOfDocument.*;
 
 @Component
 @Slf4j
@@ -22,7 +21,7 @@ public class DocumentValidatorImpl implements DocumentValidator {
 
     private final Pattern pattern = Pattern.compile("^WB_\\d{10}$");
 
-    private final static Integer ACTIVE_DATA_CELLS = 3;
+    private final static Integer ACTIVE_DATA_CELLS = 4;
 
 
     public TypeOfDocument getDocumentType(byte[] byteArray) {
@@ -35,6 +34,10 @@ public class DocumentValidatorImpl implements DocumentValidator {
         if (isInitialWithSku(sheet)) {
             log.info("Validation passed: workbook is {}", INITIAL_DOCUMENT_WITH_SKU);
             return INITIAL_DOCUMENT_WITH_SKU;
+        }
+        if (isWithData(sheet)) {
+            log.info("Validation passed: workbook is {}", DOCUMENT_WITH_DATA);
+            return DOCUMENT_WITH_DATA;
         }
         log.info("Validation failed: workbook does not correlate with any validation format");
         return NOT_VALID_DOCUMENT;
@@ -51,6 +54,9 @@ public class DocumentValidatorImpl implements DocumentValidator {
 
     private boolean isInitialWithSku(Sheet sheet) {
         Row firstRow = sheet.getRow(0);
+        if (firstRow == null) {
+            return false;
+        }
         String cell0 = firstRow.getCell(0).getStringCellValue();
         String cell1 = firstRow.getCell(1).getStringCellValue();
         String cell2 = firstRow.getCell(2).getStringCellValue();
@@ -69,18 +75,17 @@ public class DocumentValidatorImpl implements DocumentValidator {
         Cell cell = Optional.ofNullable(getFirstActiveCell(sheet))
                 .orElseThrow(RuntimeException::new);
         CellAddress activeCellAddress = cell.getAddress();
-        int firstRowNumber = activeCellAddress.getRow();
-        int lastRowNumber = activeCellAddress.getRow();
-        int firstActiveCell = activeCellAddress.getColumn();
-        if (sheet.getRow(firstRowNumber).getPhysicalNumberOfCells() > ACTIVE_DATA_CELLS) {
-            return false;
+        int firstRowIndex = activeCellAddress.getRow() - 1;
+        int lastRowIndex = activeCellAddress.getRow() - 1;
+        int firstActiveCellWithBarcode = activeCellAddress.getColumn() - 1;
+
+        for (int i = firstRowIndex; i < lastRowIndex; i++) {
+            Row row = sheet.getRow(i);
+            if (!isWithDataFormat(row, firstActiveCellWithBarcode)) {
+                return false;
+            }
         }
-
-
-
-        for (int i = firstRowNumber; i < lastRowNumber; i++) {
-
-        }
+        return true;
     }
 
     private Cell getFirstActiveCell(Sheet sheet) {
@@ -92,6 +97,19 @@ public class DocumentValidatorImpl implements DocumentValidator {
             }
         }
         return null;
+    }
+
+    private boolean isWithDataFormat(Row row, int firstActiveCellIndex) {
+        if (row.getPhysicalNumberOfCells() != ACTIVE_DATA_CELLS) {
+            return false;
+        }
+        int cellWithQuantityPerCarton = firstActiveCellIndex + 1;
+        int cellWithNumberOfCartons = firstActiveCellIndex + 2;
+        int cellWithExpiryDate = firstActiveCellIndex + 3;
+        return row.getCell(cellWithQuantityPerCarton).getCellType().equals(CellType.NUMERIC) &&
+                row.getCell(cellWithNumberOfCartons).getCellType().equals(CellType.NUMERIC) &&
+                DateUtil.isCellDateFormatted(row.getCell(cellWithExpiryDate));
+
     }
 
     private boolean isNull(Workbook workbook) {

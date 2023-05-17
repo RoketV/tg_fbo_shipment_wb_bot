@@ -5,8 +5,10 @@ import com.telegram_wb.jpa.BinaryContentJpa;
 import com.telegram_wb.jpa.DocumentJpa;
 import com.telegram_wb.model.BinaryContent;
 import com.telegram_wb.model.Document;
+import com.telegram_wb.service.AnswerProducer;
 import com.telegram_wb.service.DocumentService;
 import com.telegram_wb.util.DocumentValidator;
+import com.telegram_wb.util.MessageUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.util.IOUtils;
@@ -18,6 +20,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -29,6 +32,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+
+import static com.telegram_wb.RabbitQueues.TEXT_ANSWER;
 
 @Component
 @RequiredArgsConstructor
@@ -47,6 +52,10 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentJpa documentJpa;
 
     private final DocumentValidator documentValidator;
+
+    private final AnswerProducer answerProducer;
+
+    private final MessageUtil messageUtil;
 
 
     @Override
@@ -67,15 +76,27 @@ public class DocumentServiceImpl implements DocumentService {
                             binaryContent, fieldId, false);
                     saveDocument(binaryContent, document);
                 }
+                case DOCUMENT_WITH_DATA -> { SendMessage sendMessage = messageUtil.sendMessage(update, "Файл не прошёл валидацию, " +
+                        "всё чётко, Владос");
+                    answerProducer.produce(TEXT_ANSWER, sendMessage);}
+                case NOT_VALID_DOCUMENT -> {
+                    SendMessage sendMessage = messageUtil.sendMessage(update, "Файл не прошёл валидацию, " +
+                            "проверьте правильно ли введены данные");
+                    answerProducer.produce(TEXT_ANSWER, sendMessage);
+                }
             }
         }
     }
 
 
     @Transactional
-    public void saveDocument(BinaryContent binaryContent, Document document) {
+    private void saveDocument(BinaryContent binaryContent, Document document) {
         binaryContentJpa.save(binaryContent);
         documentJpa.save(document);
+    }
+
+    private void processDocumentWithData(byte[] fileBytes) {
+
     }
 
     private ResponseEntity<String> getFilePath(String fileId) {

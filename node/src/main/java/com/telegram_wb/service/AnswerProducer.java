@@ -5,7 +5,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 public interface AnswerProducer {
 
-    void produce(SendMessage sendMessage);
+    void produce(String rabbitQueue, SendMessage sendMessage);
 
-    void produce(SendDocument sendDocument);
+    void produce(String rabbitQueue, SendDocument sendDocument);
 }
