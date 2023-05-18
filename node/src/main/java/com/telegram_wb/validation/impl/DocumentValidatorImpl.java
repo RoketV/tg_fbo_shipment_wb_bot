@@ -1,14 +1,14 @@
-package com.telegram_wb.util;
+package com.telegram_wb.validation.impl;
 
 import com.telegram_wb.enums.TypeOfDocument;
+import com.telegram_wb.util.WorkbookFabric;
+import com.telegram_wb.validation.DocumentValidator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellAddress;
 import org.springframework.stereotype.Component;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -17,15 +17,18 @@ import static com.telegram_wb.enums.TypeOfDocument.*;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class DocumentValidatorImpl implements DocumentValidator {
 
     private final Pattern pattern = Pattern.compile("^WB_\\d{10}$");
 
     private final static Integer ACTIVE_DATA_CELLS = 4;
 
+    private final WorkbookFabric workbookFabric;
+
 
     public TypeOfDocument getDocumentType(byte[] byteArray) {
-        Workbook workbook = createWorkbook(byteArray);
+        Workbook workbook = workbookFabric.createWorkbook(byteArray);
         if (isNull(workbook)) {
             log.info("Validation failed: workbook or its sheet is null");
             return NOT_VALID_DOCUMENT;
@@ -41,15 +44,6 @@ public class DocumentValidatorImpl implements DocumentValidator {
         }
         log.info("Validation failed: workbook does not correlate with any validation format");
         return NOT_VALID_DOCUMENT;
-    }
-
-    private Workbook createWorkbook(byte[] byteArray) {
-        try (InputStream is = new ByteArrayInputStream(byteArray)) {
-            return WorkbookFactory.create(is);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     private boolean isInitialWithSku(Sheet sheet) {
@@ -72,9 +66,8 @@ public class DocumentValidatorImpl implements DocumentValidator {
 
     private boolean isWithData(Sheet sheet) {
         //TO DO work with exceptions
-        Cell cell = Optional.ofNullable(getFirstActiveCell(sheet))
+        CellAddress activeCellAddress = Optional.ofNullable(getFirstActiveCell(sheet))
                 .orElseThrow(RuntimeException::new);
-        CellAddress activeCellAddress = cell.getAddress();
         int firstRowIndex = activeCellAddress.getRow() - 1;
         int lastRowIndex = activeCellAddress.getRow() - 1;
         int firstActiveCellWithBarcode = activeCellAddress.getColumn() - 1;
@@ -88,11 +81,11 @@ public class DocumentValidatorImpl implements DocumentValidator {
         return true;
     }
 
-    private Cell getFirstActiveCell(Sheet sheet) {
+    private CellAddress getFirstActiveCell(Sheet sheet) {
         for (Row row : sheet) {
             for (Cell cell : row) {
                 if (cell.getCellType() != CellType.BLANK) {
-                    return cell;
+                    return cell.getAddress();
                 }
             }
         }

@@ -18,6 +18,7 @@
         <module>dispatcher</module>
         <module>node</module>
         <module>rabbitmq-constants</module>
+        <module>jpa</module>
     </modules>
 
     <properties>

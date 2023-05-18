@@ -1,4 +1,4 @@
-package com.telegram_wb.jpa;
+package com.telegram_wb.dao;
 
 
 import com.telegram_wb.model.BinaryContent;

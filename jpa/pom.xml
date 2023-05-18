@@ -9,15 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>node</artifactId>
-
-    <dependencies>
-        <dependency>
-            <artifactId>jpa</artifactId>
-            <groupId>com.telegram_wb</groupId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
-    </dependencies>
+    <artifactId>jpa</artifactId>
 
     <properties>
         <maven.compiler.source>20</maven.compiler.source>
