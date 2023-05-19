@@ -1,6 +1,8 @@
 package com.telegram_wb.controller;
 
+import com.telegram_wb.dto.DocumentDto;
 import com.telegram_wb.service.UpdateProducer;
+import com.telegram_wb.utils.DocumentUtil;
 import com.telegram_wb.utils.MessageUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +12,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import static com.telegram_wb.RabbitQueues.*;
+
+import static com.telegram_wb.rabbitmq.RabbitQueues.*;
 
 
 @Component
@@ -24,6 +27,8 @@ public class UpdateController {
 
     private final UpdateProducer updateProducer;
 
+    private final DocumentUtil documentUtil;
+
     public void processUpdate(Update update) {
         if (update == null) {
             log.info("update is null");
@@ -36,12 +41,13 @@ public class UpdateController {
         }
     }
 
-    public void setDocumentView(SendDocument sendDocument) {
-        if (sendDocument == null) {
+    public void setDocumentView(DocumentDto documentDto) {
+        if (documentDto == null) {
             log.info("UpdateController: document is null");
             return;
         }
         try {
+            SendDocument sendDocument = documentUtil.generateDocumentResponse(documentDto);
             myBot.execute(sendDocument);
         } catch (TelegramApiException e) {
             e.printStackTrace();
@@ -66,19 +72,20 @@ public class UpdateController {
         }
     }
 
+    private void processDocument(Update update) {
+        log.info("UpdateController: message is a document, started to process");
+        sendResponse(update, "документ получен и обрабатывается");
+        updateProducer.produce(DOCUMENT_MESSAGE, update);
+    }
+
     private void sendResponse(Update update, String text) {
         SendMessage message = messageUtil.generateTextResponse(update, text);
         try {
+            log.info("Dispatcher sent message with text {} to client", text);
             myBot.execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
-    }
-
-    private void processDocument(Update update) {
-        log.info("UpdateController: message is a document, started to process");
-        sendResponse(update, "документ получен");
-        updateProducer.produce(DOCUMENT_MESSAGE, update);
     }
 
     public void setMyBot(TelegramLongPollingBot myBot) {

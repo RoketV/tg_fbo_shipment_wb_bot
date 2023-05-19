@@ -1,13 +1,13 @@
 package com.telegram_wb.config;
 
 
-import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import static com.telegram_wb.RabbitQueues.*;
+import static com.telegram_wb.rabbitmq.RabbitQueues.*;
 
 @Configuration
 public class RabbitConfigurations {

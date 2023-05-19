@@ -9,7 +9,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-import static com.telegram_wb.RabbitQueues.*;
+import static com.telegram_wb.rabbitmq.RabbitQueues.*;
 
 
 @Component

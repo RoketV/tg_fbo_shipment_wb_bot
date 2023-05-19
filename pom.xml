@@ -17,8 +17,8 @@
     <modules>
         <module>dispatcher</module>
         <module>node</module>
-        <module>rabbitmq-constants</module>
         <module>jpa</module>
+        <module>utils</module>
     </modules>
 
     <properties>
@@ -37,12 +37,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.telegram_wb</groupId>
-            <artifactId>rabbitmq-constants</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.springframework.amqp</groupId>
             <artifactId>spring-rabbit-test</artifactId>
             <scope>test</scope>
@@ -52,6 +46,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <artifactId>utils</artifactId>
+            <groupId>com.telegram_wb</groupId>
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
 
         <dependency>
