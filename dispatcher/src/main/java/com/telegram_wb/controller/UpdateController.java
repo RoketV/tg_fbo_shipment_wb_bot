@@ -13,7 +13,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import static com.telegram_wb.rabbitmq.RabbitQueues.*;
+import static com.telegram_wb.messages.AnswerConstants.*;
+import static com.telegram_wb.rabbitmq.RabbitQueues.DOCUMENT_MESSAGE;
 
 
 @Component
@@ -28,6 +29,8 @@ public class UpdateController {
     private final UpdateProducer updateProducer;
 
     private final DocumentUtil documentUtil;
+
+    private static final Long MAX_FILE_SIZE = 50_000_000L;
 
     public void processUpdate(Update update) {
         if (update == null) {
@@ -73,9 +76,12 @@ public class UpdateController {
     }
 
     private void processDocument(Update update) {
-        log.info("UpdateController: message is a document, started to process");
-        sendResponse(update, "документ получен и обрабатывается");
-        updateProducer.produce(DOCUMENT_MESSAGE, update);
+        log.info("UpdateController: message with chat id {} is a document, started to process",
+                update.getMessage().getChatId());
+        if (documentValidation(update)) {
+            sendResponse(update, DOCUMENT_RECEIVED);
+            updateProducer.produce(DOCUMENT_MESSAGE, update);
+        }
     }
 
     private void sendResponse(Update update, String text) {
@@ -86,6 +92,23 @@ public class UpdateController {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+
+    private boolean documentValidation(Update update) {
+        if (update.getMessage().getDocument().getFileSize() > MAX_FILE_SIZE) {
+            log.info("document with chat id {} is more then 50 mb", update.getMessage().getChatId());
+            sendResponse(update, FILE_SIZE_IS_MORE_THEN);
+            return false;
+        }
+        if (update.getMessage().getDocument().getMimeType().contains("excel")
+                || update.getMessage().getDocument().getMimeType().contains("spreadsheetml")) {
+            log.info("document with chat id {} passed initial validation in dispatcher",
+                    update.getMessage().getChatId());
+            return true;
+        }
+        log.info("document with chat id {} is not an excel file", update.getMessage().getChatId());
+        sendResponse(update, EXCEL_FORMAT_NEEDED);
+        return false;
     }
 
     public void setMyBot(TelegramLongPollingBot myBot) {

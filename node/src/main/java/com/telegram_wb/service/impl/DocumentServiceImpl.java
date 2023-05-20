@@ -4,6 +4,7 @@ import com.telegram_wb.dao.BinaryContentJpa;
 import com.telegram_wb.dao.DocumentJpa;
 import com.telegram_wb.dto.DocumentDto;
 import com.telegram_wb.enums.TypeOfDocument;
+import com.telegram_wb.exceptions.InitialDocumentNotFound;
 import com.telegram_wb.model.BinaryContent;
 import com.telegram_wb.model.Document;
 import com.telegram_wb.service.AnswerProducer;
@@ -37,6 +38,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDateTime;
 
+import static com.telegram_wb.messages.AnswerConstants.INITIAL_DOCUMENT_NOT_FOUND;
 import static com.telegram_wb.rabbitmq.RabbitQueues.DOCUMENT_ANSWER;
 import static com.telegram_wb.rabbitmq.RabbitQueues.TEXT_ANSWER;
 
@@ -78,10 +80,15 @@ public class DocumentServiceImpl implements DocumentService {
                     saveDocument(binaryContent, document);
                 }
                 case DOCUMENT_WITH_DATA -> {
-                    Workbook workbook = processDocumentWithData(fileBytes, chatId);
-                    byte[] workbookBytes = getWorkbookBytes(workbook);
-                    DocumentDto documentDto = new DocumentDto(chatId, workbookBytes);
-                    answerProducer.produce(DOCUMENT_ANSWER, documentDto);
+                    try {
+                        Workbook workbook = processDocumentWithData(fileBytes, chatId);
+                        byte[] workbookBytes = getWorkbookBytes(workbook);
+                        DocumentDto documentDto = new DocumentDto(chatId, workbookBytes);
+                        answerProducer.produce(DOCUMENT_ANSWER, documentDto);
+                    } catch (InitialDocumentNotFound e) {
+                        SendMessage sendMessage = messageUtil.sendMessage(chatId, INITIAL_DOCUMENT_NOT_FOUND);
+                        answerProducer.produce(TEXT_ANSWER, sendMessage);
+                    }
                 }
                 case NOT_VALID_DOCUMENT -> {
                     SendMessage sendMessage = messageUtil.sendMessage(update, "Файл не прошёл валидацию, " +
@@ -99,10 +106,11 @@ public class DocumentServiceImpl implements DocumentService {
         documentJpa.save(document);
     }
 
-    private Workbook processDocumentWithData(byte[] fileBytes, String chatId) {
+    private Workbook processDocumentWithData(byte[] fileBytes, String chatId) throws InitialDocumentNotFound {
         Workbook workbookWithData = workbookFabric.createWorkbook(fileBytes);
         Document initialDocument = documentJpa.getLatestRawDocument(chatId)
-                .orElseThrow(RuntimeException::new);
+                .orElseThrow(() -> new InitialDocumentNotFound(String.format("Cannot process DocumentWithData, " +
+                        "initial document with chatId %s not found", chatId)));
         Workbook initialWorkBook = workbookFabric.createWorkbook(initialDocument
                 .getBinaryContent().getContent());
         return workbookMerger.merge(initialWorkBook, workbookWithData);

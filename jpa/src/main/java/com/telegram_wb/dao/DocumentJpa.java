@@ -11,4 +11,5 @@ public interface DocumentJpa extends JpaRepository<Document, Long> {
 
     @Query("from Document d where d.chatId=?1 order by d.timestamp desc ")
     Optional<Document> getLatestRawDocument(String chatId);
+
 }

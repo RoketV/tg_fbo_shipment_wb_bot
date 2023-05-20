@@ -13,4 +13,11 @@ public class MessageUtil {
                 .text(text)
                 .build();
     }
+
+    public SendMessage sendMessage(String chatId, String text) {
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .build();
+    }
 }

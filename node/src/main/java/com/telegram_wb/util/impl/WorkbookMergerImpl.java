@@ -22,8 +22,10 @@ public class WorkbookMergerImpl implements WorkbookMerger {
         int initialSheetRowIndex = 1;
         for (Row row : sheetWithData) {
             if (row != null) {
-                int rowsToFill = (int) row.getCell(2).getNumericCellValue() + initialSheetRowIndex;
-                for (int i = initialSheetRowIndex; i < rowsToFill; i++) {
+                int cellIndexWithNumbersOfRowToFill = findActiveCell(row);
+                int rowsToFill = (int) row.getCell(cellIndexWithNumbersOfRowToFill + 2).getNumericCellValue()
+                        + initialSheetRowIndex;
+                for (int i = initialSheetRowIndex; i <= rowsToFill; i++) {
                     if (initialSheet.getRow(i) == null) {
                         break;
                     }
@@ -44,12 +46,15 @@ public class WorkbookMergerImpl implements WorkbookMerger {
         if (!wbBarcode.matches(pattern.pattern())) {
             return;
         }
-
-        long barcode = (long) rowWithData.getCell(0).getNumericCellValue();
+        int firstActiveCellIndex = findActiveCell(rowWithData);
+        if (firstActiveCellIndex == -1) {
+            return;
+        }
+        long barcode = (long) rowWithData.getCell(firstActiveCellIndex).getNumericCellValue();
         initialRow.getCell(0, CREATE_NULL_AS_BLANK).setCellValue(barcode);
-        int numberOfGoods = (int) rowWithData.getCell(1).getNumericCellValue();
+        int numberOfGoods = (int) rowWithData.getCell(firstActiveCellIndex + 1).getNumericCellValue();
         initialRow.getCell(1, CREATE_NULL_AS_BLANK).setCellValue(numberOfGoods);
-        Date expiryDate = rowWithData.getCell(3).getDateCellValue();
+        Date expiryDate = rowWithData.getCell(firstActiveCellIndex + 3).getDateCellValue();
         Cell date = initialRow.getCell(3, CREATE_NULL_AS_BLANK);
         date.setCellValue(expiryDate);
         date.setCellStyle(dateCellStyle);
@@ -62,5 +67,14 @@ public class WorkbookMergerImpl implements WorkbookMerger {
                 creationHelper.createDataFormat().getFormat("mm/dd/yyyy")
         );
         return cellStyle;
+    }
+
+    private int findActiveCell(Row row) {
+        for (Cell cell : row) {
+            if (cell != null) {
+                return cell.getAddress().getColumn();
+            }
+        }
+        return -1;
     }
 }
