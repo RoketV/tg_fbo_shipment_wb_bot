@@ -13,10 +13,9 @@ public class Document {
     public Document() {
     }
 
-    public Document(BinaryContent binaryContent, String fileId, Boolean processed,
+    public Document(BinaryContent binaryContent, Boolean processed,
                     LocalDateTime timestamp, String chatId) {
         this.binaryContent = binaryContent;
-        this.fileId = fileId;
         this.processed = processed;
         this.timestamp = timestamp;
         this.chatId = chatId;
@@ -26,11 +25,8 @@ public class Document {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     private BinaryContent binaryContent;
-
-    @Column(name = "telegram_file_id")
-    private String fileId;
 
     @Column(name = "processed")
     private Boolean processed;

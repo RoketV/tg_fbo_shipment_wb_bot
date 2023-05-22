@@ -13,18 +13,21 @@ import static org.apache.poi.ss.usermodel.Row.MissingCellPolicy.CREATE_NULL_AS_B
 public class WorkbookMergerImpl implements WorkbookMerger {
 
     private final Pattern pattern = Pattern.compile("^WB_\\d{10}$");
+    private final static int CELL_WITH_ROWS_TO_FILL_INDEX = 3;
 
     @Override
     public Workbook merge(Workbook initial, Workbook withData) {
-        Sheet initialSheet = initial.getSheetAt(0);
-        Sheet sheetWithData = withData.getSheetAt(0);
+        int activeInitialSheetIndex = initial.getActiveSheetIndex();
+        Sheet initialSheet = initial.getSheetAt(activeInitialSheetIndex);
+        int activeSheetWithDataIndex = initial.getActiveSheetIndex();
+        Sheet sheetWithData = withData.getSheetAt(activeSheetWithDataIndex);
         CellStyle cellStyle = createDateCellStyle(initial);
         int initialSheetRowIndex = 1;
         for (Row row : sheetWithData) {
             if (row != null) {
-                int cellIndexWithNumbersOfRowToFill = findActiveCell(row);
-                int rowsToFill = (int) row.getCell(cellIndexWithNumbersOfRowToFill + 2).getNumericCellValue()
-                        + initialSheetRowIndex;
+                int firstActiveCellIndex = findActiveCell(row);
+                int rowsToFill = (int) row.getCell(firstActiveCellIndex + CELL_WITH_ROWS_TO_FILL_INDEX)
+                        .getNumericCellValue() + initialSheetRowIndex;
                 for (int i = initialSheetRowIndex; i <= rowsToFill; i++) {
                     if (initialSheet.getRow(i) == null) {
                         break;
@@ -34,7 +37,16 @@ public class WorkbookMergerImpl implements WorkbookMerger {
                 initialSheetRowIndex = rowsToFill;
             }
         }
+        setColumnSize(initial);
         return initial;
+    }
+
+    private void setColumnSize(Workbook initial) {
+        int activeSheetIndex = initial.getActiveSheetIndex();
+        Sheet sheet = initial.getSheetAt(activeSheetIndex);
+        for (int i = 0; i < sheet.getRow(0).getLastCellNum(); i++) {
+            sheet.autoSizeColumn(i);
+        }
     }
 
     private void mergeRows(Row initialRow, Row rowWithData, CellStyle dateCellStyle) {

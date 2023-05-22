@@ -15,6 +15,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import static com.telegram_wb.messages.AnswerConstants.*;
 import static com.telegram_wb.rabbitmq.RabbitQueues.DOCUMENT_MESSAGE;
+import static com.telegram_wb.rabbitmq.RabbitQueues.TEXT_MESSAGE;
 
 
 @Component
@@ -73,6 +74,9 @@ public class UpdateController {
         if (update.getMessage().hasDocument()) {
             processDocument(update);
         }
+        if (update.getMessage().hasText()) {
+            processText(update);
+        }
     }
 
     private void processDocument(Update update) {
@@ -82,6 +86,12 @@ public class UpdateController {
             sendResponse(update, DOCUMENT_RECEIVED);
             updateProducer.produce(DOCUMENT_MESSAGE, update);
         }
+    }
+
+    private void processText(Update update) {
+        log.info("UpdateController: message with chat id {} is text, started to process",
+                update.getMessage().getChatId());
+        updateProducer.produce(TEXT_MESSAGE, update);
     }
 
     private void sendResponse(Update update, String text) {

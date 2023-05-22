@@ -1,6 +1,5 @@
 package com.telegram_wb.service.impl;
 
-import com.telegram_wb.dao.BinaryContentJpa;
 import com.telegram_wb.dao.DocumentJpa;
 import com.telegram_wb.dto.DocumentDto;
 import com.telegram_wb.enums.TypeOfDocument;
@@ -38,7 +37,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDateTime;
 
-import static com.telegram_wb.messages.AnswerConstants.INITIAL_DOCUMENT_NOT_FOUND;
+import static com.telegram_wb.messages.AnswerConstants.*;
 import static com.telegram_wb.rabbitmq.RabbitQueues.DOCUMENT_ANSWER;
 import static com.telegram_wb.rabbitmq.RabbitQueues.TEXT_ANSWER;
 
@@ -52,7 +51,6 @@ public class DocumentServiceImpl implements DocumentService {
     private String fileStorageUri;
     @Value("${bot.token}")
     private String token;
-    private final BinaryContentJpa binaryContentJpa;
     private final DocumentJpa documentJpa;
     private final DocumentValidator documentValidator;
     private final AnswerProducer answerProducer;
@@ -65,48 +63,55 @@ public class DocumentServiceImpl implements DocumentService {
     @Transactional
     public void processDocument(Update update) {
         Message message = update.getMessage();
-        String fieldId = message.getDocument().getFileId();
-        ResponseEntity<String> response = getFilePath(fieldId);
+        String fileId = message.getDocument().getFileId();
+        ResponseEntity<String> response = getFilePath(fileId);
         if (response.getStatusCode().is2xxSuccessful()) {
             URL url = getFileURLFromResponse(response);
             byte[] fileBytes = getFileByteArray(url);
             String chatId = message.getChatId().toString();
             TypeOfDocument type = documentValidator.getDocumentType(fileBytes);
             switch (type) {
-                case INITIAL_DOCUMENT_WITH_SKU -> {
-                    BinaryContent binaryContent = new BinaryContent(fileBytes);
-                    Document document = new Document(binaryContent, fieldId,
-                            false, LocalDateTime.now(), chatId);
-                    saveDocument(binaryContent, document);
-                }
-                case DOCUMENT_WITH_DATA -> {
-                    try {
-                        Workbook workbook = processDocumentWithData(fileBytes, chatId);
-                        byte[] workbookBytes = getWorkbookBytes(workbook);
-                        DocumentDto documentDto = new DocumentDto(chatId, workbookBytes);
-                        answerProducer.produce(DOCUMENT_ANSWER, documentDto);
-                    } catch (InitialDocumentNotFound e) {
-                        SendMessage sendMessage = messageUtil.sendMessage(chatId, INITIAL_DOCUMENT_NOT_FOUND);
-                        answerProducer.produce(TEXT_ANSWER, sendMessage);
-                    }
-                }
-                case NOT_VALID_DOCUMENT -> {
-                    SendMessage sendMessage = messageUtil.sendMessage(update, "Файл не прошёл валидацию, " +
-                            "проверьте правильно ли введены данные");
-                    answerProducer.produce(TEXT_ANSWER, sendMessage);
-                }
+                case INITIAL_DOCUMENT_WITH_SKU -> processInitialDocument(fileBytes, chatId);
+                case DOCUMENT_WITH_DATA -> processDocumentWithData(fileBytes, chatId);
+                case NOT_VALID_DOCUMENT -> handleNotValidDocument(update);
             }
         }
     }
 
-
-    @Transactional
-    private void saveDocument(BinaryContent binaryContent, Document document) {
-        binaryContentJpa.save(binaryContent);
+    private void processInitialDocument(byte[] fileBytes, String chatId) {
+        BinaryContent binaryContent = new BinaryContent(fileBytes);
+        Document document = new Document(binaryContent,
+                false, LocalDateTime.now(), chatId);
         documentJpa.save(document);
+        SendMessage sendMessage = messageUtil.sendMessage(chatId, INITIAL_DOCUMENT_WITH_SKU_SAVED);
+        answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
-    private Workbook processDocumentWithData(byte[] fileBytes, String chatId) throws InitialDocumentNotFound {
+    private void processDocumentWithData(byte[] fileBytes, String chatId) {
+        try {
+            Workbook workbook = parseDocumentWithData(fileBytes, chatId);
+            byte[] workbookBytes = getWorkbookBytes(workbook);
+            DocumentDto documentDto = new DocumentDto(chatId, workbookBytes);
+            answerProducer.produce(DOCUMENT_ANSWER, documentDto);
+            BinaryContent binaryContent = new BinaryContent(workbookBytes);
+            Document document = new Document(binaryContent, true, LocalDateTime.now(), chatId);
+            documentJpa.save(document);
+        } catch (InitialDocumentNotFound e) {
+            handleInitialDocumentNotFound(chatId);
+        }
+    }
+
+    private void handleNotValidDocument(Update update) {
+        SendMessage sendMessage = messageUtil.sendMessage(update, FILE_NOT_VALID);
+        answerProducer.produce(TEXT_ANSWER, sendMessage);
+    }
+
+    private void handleInitialDocumentNotFound(String chatId) {
+        SendMessage sendMessage = messageUtil.sendMessage(chatId, INITIAL_DOCUMENT_NOT_FOUND);
+        answerProducer.produce(TEXT_ANSWER, sendMessage);
+    }
+
+    private Workbook parseDocumentWithData(byte[] fileBytes, String chatId) throws InitialDocumentNotFound {
         Workbook workbookWithData = workbookFabric.createWorkbook(fileBytes);
         Document initialDocument = documentJpa.getLatestRawDocument(chatId)
                 .orElseThrow(() -> new InitialDocumentNotFound(String.format("Cannot process DocumentWithData, " +
