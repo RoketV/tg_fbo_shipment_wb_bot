@@ -15,8 +15,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.Optional;
 
-import static com.telegram_wb.messages.AnswerConstants.DOCUMENT_NOT_FOUND_IN_DB;
-import static com.telegram_wb.messages.AnswerConstants.HELP_MESSAGE;
+import static com.telegram_wb.messages.AnswerConstants.*;
 import static com.telegram_wb.rabbitmq.RabbitQueues.DOCUMENT_ANSWER;
 import static com.telegram_wb.rabbitmq.RabbitQueues.TEXT_ANSWER;
 
@@ -53,7 +52,7 @@ public class TextServiceImpl implements TextService {
     }
 
     private void processStartCommand(Update update) {
-        SendMessage sendMessage = messageUtil.sendMessage(update, HELP_MESSAGE);
+        SendMessage sendMessage = messageUtil.sendMessage(update, START_MESSAGE);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
@@ -85,5 +84,4 @@ public class TextServiceImpl implements TextService {
         SendMessage sendMessage = messageUtil.sendMessage(update, DOCUMENT_NOT_FOUND_IN_DB);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
-
 }
