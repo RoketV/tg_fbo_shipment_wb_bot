@@ -1,16 +1,17 @@
-package com.telegram_wb.util.impl;
+package com.telegram_wb.mapper.impl;
 
-import com.telegram_wb.util.WorkbookFabric;
+import com.telegram_wb.mapper.WorkbookMapper;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 @Component
-public class WorkbookFabricImpl implements WorkbookFabric {
+public class WorkbookMapperImpl implements WorkbookMapper {
     @Override
     public Workbook createWorkbook(byte[] fileBytes) {
         try (InputStream is = new ByteArrayInputStream(fileBytes)) {
@@ -19,5 +20,15 @@ public class WorkbookFabricImpl implements WorkbookFabric {
             e.printStackTrace();
         }
         return null;
+    }
+
+    @Override
+    public byte[] toFileBites(Workbook workbook) {
+        try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
+            workbook.write(stream);
+            return stream.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

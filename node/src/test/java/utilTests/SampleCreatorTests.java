@@ -1,6 +1,8 @@
 package utilTests;
 
 
+import com.telegram_wb.mapper.impl.WorkbookMapperImpl;
+import com.telegram_wb.util.impl.BarcodeGeneratorImpl;
 import com.telegram_wb.util.impl.SampleCreatorImpl;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -16,8 +18,8 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-
 public class SampleCreatorTests {
+
 
 
     @Test
@@ -26,9 +28,9 @@ public class SampleCreatorTests {
         Pattern pattern = Pattern.compile(regex);
         Method method = SampleCreatorImpl.class.getDeclaredMethod("generateRandomSku");
         method.setAccessible(true);
-        SampleCreatorImpl sampleCreator1 = new SampleCreatorImpl();
+        SampleCreatorImpl sampleCreator = new SampleCreatorImpl(new WorkbookMapperImpl(), new BarcodeGeneratorImpl());
 
-        String randomSku = (String) method.invoke(sampleCreator1);
+        String randomSku = (String) method.invoke(sampleCreator);
 
         Matcher matcher = pattern.matcher(randomSku);
         assertTrue(matcher.matches());
@@ -41,7 +43,7 @@ public class SampleCreatorTests {
 
         Method createHeadersMethod = SampleCreatorImpl.class.getDeclaredMethod("createHeaders", Sheet.class);
         createHeadersMethod.setAccessible(true);
-        SampleCreatorImpl sampleCreator = new SampleCreatorImpl();
+        SampleCreatorImpl sampleCreator = new SampleCreatorImpl(new WorkbookMapperImpl(), new BarcodeGeneratorImpl());
 
         createHeadersMethod.invoke(sampleCreator, sheet);
         Row row = sheet.getRow(0);
@@ -61,7 +63,7 @@ public class SampleCreatorTests {
 
         Method fillSheetWithSkuMethod = SampleCreatorImpl.class.getDeclaredMethod("fillSheetWithSku", Sheet.class);
         fillSheetWithSkuMethod.setAccessible(true);
-        SampleCreatorImpl sampleCreator = new SampleCreatorImpl();
+        SampleCreatorImpl sampleCreator = new SampleCreatorImpl(new WorkbookMapperImpl(), new BarcodeGeneratorImpl());
 
         fillSheetWithSkuMethod.invoke(sampleCreator, sheet);
         int lastRowIndexAfterMethod = sheet.getLastRowNum();

@@ -6,7 +6,7 @@ public enum TextCommand {
     HELP("/help"),
     SKU_SAMPLE_DOCUMENT("/sample_with_sku"),
     SAMPLE_WITH_DATA("/sample_with_data"),
-    LAST_PROCESSED_DOCUMENT("/last_processed_documents");
+    LAST_PROCESSED_DOCUMENT("/last_processed_document");
 
     private final String value;
 

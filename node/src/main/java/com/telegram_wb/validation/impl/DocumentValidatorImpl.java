@@ -1,7 +1,7 @@
 package com.telegram_wb.validation.impl;
 
 import com.telegram_wb.enums.TypeOfDocument;
-import com.telegram_wb.util.WorkbookFabric;
+import com.telegram_wb.mapper.WorkbookMapper;
 import com.telegram_wb.validation.DocumentValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,11 +24,11 @@ public class DocumentValidatorImpl implements DocumentValidator {
 
     private final static Integer ACTIVE_DATA_CELLS = 4;
 
-    private final WorkbookFabric workbookFabric;
+    private final WorkbookMapper workbookMapper;
 
 
     public TypeOfDocument getDocumentType(byte[] byteArray) {
-        Workbook workbook = workbookFabric.createWorkbook(byteArray);
+        Workbook workbook = workbookMapper.createWorkbook(byteArray);
         if (isNull(workbook)) {
             log.info("Validation failed: workbook or its sheet is null");
             return NOT_VALID_DOCUMENT;

@@ -14,16 +14,16 @@ import java.util.Objects;
 public class DocumentUtil {
 
     public SendDocument generateDocumentResponse(DocumentDto documentDto) {
+        InputFile inputFile = convertFile(documentDto.getFileBytes(), documentDto.getName());
         return SendDocument.builder()
-                .document(Objects.requireNonNull(convertFile(documentDto.getFileBytes())))
+                .document(Objects.requireNonNull(inputFile))
                 .chatId(documentDto.getChatId())
                 .build();
     }
 
-    private InputFile convertFile(byte[] fileBytes) {
+    private InputFile convertFile(byte[] fileBytes, String fileName) {
         try (InputStream is = new ByteArrayInputStream(fileBytes)) {
-
-            return new InputFile(is, "name.xlsx");
+            return new InputFile(is, fileName);
         } catch (IOException e) {
             e.printStackTrace();
         }

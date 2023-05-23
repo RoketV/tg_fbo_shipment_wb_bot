@@ -4,12 +4,12 @@ import com.telegram_wb.dao.DocumentJpa;
 import com.telegram_wb.dto.DocumentDto;
 import com.telegram_wb.enums.TypeOfDocument;
 import com.telegram_wb.exceptions.InitialDocumentNotFound;
+import com.telegram_wb.mapper.WorkbookMapper;
 import com.telegram_wb.model.BinaryContent;
 import com.telegram_wb.model.Document;
 import com.telegram_wb.service.AnswerProducer;
 import com.telegram_wb.service.DocumentService;
 import com.telegram_wb.util.MessageUtil;
-import com.telegram_wb.util.WorkbookFabric;
 import com.telegram_wb.util.WorkbookMerger;
 import com.telegram_wb.validation.DocumentValidator;
 import jakarta.transaction.Transactional;
@@ -28,7 +28,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -37,6 +36,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDateTime;
 
+import static com.telegram_wb.documentNames.DocumentNames.NEW_PROCESSED_DOCUMENT_NAME;
 import static com.telegram_wb.messages.AnswerConstants.*;
 import static com.telegram_wb.rabbitmq.RabbitQueues.DOCUMENT_ANSWER;
 import static com.telegram_wb.rabbitmq.RabbitQueues.TEXT_ANSWER;
@@ -55,7 +55,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentValidator documentValidator;
     private final AnswerProducer answerProducer;
     private final MessageUtil messageUtil;
-    private final WorkbookFabric workbookFabric;
+    private final WorkbookMapper workbookMapper;
     private final WorkbookMerger workbookMerger;
 
 
@@ -90,8 +90,8 @@ public class DocumentServiceImpl implements DocumentService {
     private void processDocumentWithData(byte[] fileBytes, String chatId) {
         try {
             Workbook workbook = parseDocumentWithData(fileBytes, chatId);
-            byte[] workbookBytes = getWorkbookBytes(workbook);
-            DocumentDto documentDto = new DocumentDto(chatId, workbookBytes);
+            byte[] workbookBytes = workbookMapper.toFileBites(workbook);
+            DocumentDto documentDto = new DocumentDto(chatId, workbookBytes, NEW_PROCESSED_DOCUMENT_NAME);
             answerProducer.produce(DOCUMENT_ANSWER, documentDto);
             BinaryContent binaryContent = new BinaryContent(workbookBytes);
             Document document = new Document(binaryContent, true, LocalDateTime.now(), chatId);
@@ -112,11 +112,11 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private Workbook parseDocumentWithData(byte[] fileBytes, String chatId) throws InitialDocumentNotFound {
-        Workbook workbookWithData = workbookFabric.createWorkbook(fileBytes);
+        Workbook workbookWithData = workbookMapper.createWorkbook(fileBytes);
         Document initialDocument = documentJpa.getLatestRawDocument(chatId)
                 .orElseThrow(() -> new InitialDocumentNotFound(String.format("Cannot process DocumentWithData, " +
                         "initial document with chatId %s not found", chatId)));
-        Workbook initialWorkBook = workbookFabric.createWorkbook(initialDocument
+        Workbook initialWorkBook = workbookMapper.createWorkbook(initialDocument
                 .getBinaryContent().getContent());
         return workbookMerger.merge(initialWorkBook, workbookWithData);
     }
@@ -157,14 +157,5 @@ public class DocumentServiceImpl implements DocumentService {
             e.printStackTrace();
         }
         return null;
-    }
-
-    private byte[] getWorkbookBytes(Workbook workbook) {
-        try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
-            workbook.write(stream);
-            return stream.toByteArray();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 }
