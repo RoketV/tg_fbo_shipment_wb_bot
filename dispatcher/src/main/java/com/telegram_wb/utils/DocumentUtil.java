@@ -14,16 +14,16 @@ import java.util.Objects;
 public class DocumentUtil {
 
     public SendDocument generateDocumentResponse(DocumentDto documentDto) {
-        InputFile inputFile = convertFile(documentDto.getFileBytes(), documentDto.getName());
+        InputFile inputFile = convertFile(documentDto);
         return SendDocument.builder()
                 .document(Objects.requireNonNull(inputFile))
                 .chatId(documentDto.getChatId())
                 .build();
     }
 
-    private InputFile convertFile(byte[] fileBytes, String fileName) {
-        try (InputStream is = new ByteArrayInputStream(fileBytes)) {
-            return new InputFile(is, fileName);
+    private InputFile convertFile(DocumentDto documentDto) {
+        try (InputStream is = new ByteArrayInputStream(documentDto.getFileBytes())) {
+            return new InputFile(is, documentDto.getName());
         } catch (IOException e) {
             e.printStackTrace();
         }

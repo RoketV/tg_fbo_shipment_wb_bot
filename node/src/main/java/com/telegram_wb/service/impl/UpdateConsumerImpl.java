@@ -2,7 +2,7 @@ package com.telegram_wb.service.impl;
 
 
 import com.telegram_wb.service.DocumentService;
-import com.telegram_wb.service.TextService;
+import com.telegram_wb.service.CommandService;
 import com.telegram_wb.service.UpdateConsumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,7 @@ import static com.telegram_wb.rabbitmq.RabbitQueues.*;
 public class UpdateConsumerImpl implements UpdateConsumer {
 
     private final DocumentService documentService;
-    private final TextService textService;
+    private final CommandService commandService;
 
     @Override
     @RabbitListener(queues = DOCUMENT_MESSAGE)
@@ -32,6 +32,6 @@ public class UpdateConsumerImpl implements UpdateConsumer {
     @RabbitListener(queues = TEXT_MESSAGE)
     public void consumeTextUpdate(Update update) {
         log.info("text message received by the node from Rabbit");
-        textService.processText(update);
+        commandService.processText(update);
     }
 }

@@ -51,6 +51,9 @@ public class DocumentValidatorImpl implements DocumentValidator {
         if (firstRow == null) {
             return false;
         }
+        if (!allCellsAreStrings(firstRow)) {
+            return false;
+        }
         String cell0 = firstRow.getCell(0).getStringCellValue();
         String cell1 = firstRow.getCell(1).getStringCellValue();
         String cell2 = firstRow.getCell(2).getStringCellValue();
@@ -62,6 +65,15 @@ public class DocumentValidatorImpl implements DocumentValidator {
                 Objects.equals(cell2, "шк короба") &&
                 Objects.equals(cell3, "срок годности") &&
                 cell4.matches(pattern.pattern());
+    }
+
+    private boolean allCellsAreStrings(Row row) {
+        for (Cell cell : row) {
+            if (cell.getCellType() != CellType.STRING) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean isWithData(Sheet sheet) {

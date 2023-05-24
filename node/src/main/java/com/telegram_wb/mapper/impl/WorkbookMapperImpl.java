@@ -1,5 +1,6 @@
 package com.telegram_wb.mapper.impl;
 
+import com.telegram_wb.dto.DocumentDto;
 import com.telegram_wb.mapper.WorkbookMapper;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
@@ -30,5 +31,13 @@ public class WorkbookMapperImpl implements WorkbookMapper {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public DocumentDto toDocumentDto(Workbook workbook) {
+            byte[] fileBytes = toFileBites(workbook);
+            DocumentDto documentDto = new DocumentDto();
+            documentDto.setFileBytes(fileBytes);
+            return documentDto;
     }
 }
