@@ -66,7 +66,7 @@ public class WorkbookMergerImpl implements WorkbookMerger {
         initialRow.getCell(0, CREATE_NULL_AS_BLANK).setCellValue(barcode);
         int numberOfGoods = (int) rowWithData.getCell(firstActiveCellIndex + 1).getNumericCellValue();
         initialRow.getCell(1, CREATE_NULL_AS_BLANK).setCellValue(numberOfGoods);
-        Date expiryDate = rowWithData.getCell(firstActiveCellIndex + 3).getDateCellValue();
+        Date expiryDate = rowWithData.getCell(firstActiveCellIndex + 2).getDateCellValue();
         Cell date = initialRow.getCell(3, CREATE_NULL_AS_BLANK);
         date.setCellValue(expiryDate);
         date.setCellStyle(dateCellStyle);
