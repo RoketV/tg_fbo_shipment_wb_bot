@@ -26,7 +26,7 @@ public class CommandServiceImpl implements CommandService {
 
     private final AnswerProducer answerProducer;
 
-    private final MessageUtil messageUtil;
+    private final MessageUtil messageUtilImpl;
 
     private final DocumentJpa documentJpa;
 
@@ -55,12 +55,12 @@ public class CommandServiceImpl implements CommandService {
     }
 
     private void processStartCommand(Update update) {
-        SendMessage sendMessage = messageUtil.sendMessage(update, START_MESSAGE);
+        SendMessage sendMessage = messageUtilImpl.sendMessage(update, START_MESSAGE);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
     private void processHelpCommand(Update update) {
-        SendMessage sendMessage = messageUtil.sendMessage(update, HELP_MESSAGE);
+        SendMessage sendMessage = messageUtilImpl.sendMessage(update, HELP_MESSAGE);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
@@ -87,12 +87,12 @@ public class CommandServiceImpl implements CommandService {
             answerProducer.produce(DOCUMENT_ANSWER, documentDto);
             return;
         }
-        SendMessage sendMessage = messageUtil.sendMessage(update, DOCUMENT_NOT_FOUND_IN_DB);
+        SendMessage sendMessage = messageUtilImpl.sendMessage(update, DOCUMENT_NOT_FOUND_IN_DB);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
     private void sendErrorCommandMessage(Update update) {
-        SendMessage sendMessage = messageUtil.sendMessage(update, ERROR_COMMAND);
+        SendMessage sendMessage = messageUtilImpl.sendMessage(update, ERROR_COMMAND);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 

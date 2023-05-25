@@ -54,7 +54,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentJpa documentJpa;
     private final DocumentValidator documentValidator;
     private final AnswerProducer answerProducer;
-    private final MessageUtil messageUtil;
+    private final MessageUtil messageUtilImpl;
     private final WorkbookMapper workbookMapper;
     private final WorkbookMerger workbookMerger;
 
@@ -83,7 +83,7 @@ public class DocumentServiceImpl implements DocumentService {
         Document document = new Document(binaryContent,
                 false, LocalDateTime.now(), chatId);
         documentJpa.save(document);
-        SendMessage sendMessage = messageUtil.sendMessage(chatId, INITIAL_DOCUMENT_WITH_SKU_SAVED);
+        SendMessage sendMessage = messageUtilImpl.sendMessage(chatId, INITIAL_DOCUMENT_WITH_SKU_SAVED);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
@@ -102,12 +102,12 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private void handleNotValidDocument(Update update) {
-        SendMessage sendMessage = messageUtil.sendMessage(update, FILE_NOT_VALID);
+        SendMessage sendMessage = messageUtilImpl.sendMessage(update, FILE_NOT_VALID);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
     private void handleInitialDocumentNotFound(String chatId) {
-        SendMessage sendMessage = messageUtil.sendMessage(chatId, INITIAL_DOCUMENT_NOT_FOUND);
+        SendMessage sendMessage = messageUtilImpl.sendMessage(chatId, INITIAL_DOCUMENT_NOT_FOUND);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
