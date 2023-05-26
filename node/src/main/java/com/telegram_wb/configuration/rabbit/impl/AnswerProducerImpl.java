@@ -1,7 +1,7 @@
-package com.telegram_wb.service.impl;
+package com.telegram_wb.configuration.rabbit.impl;
 
 import com.telegram_wb.dto.DocumentDto;
-import com.telegram_wb.service.AnswerProducer;
+import com.telegram_wb.configuration.rabbit.AnswerProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;

@@ -1,9 +1,9 @@
-package com.telegram_wb.service.impl;
+package com.telegram_wb.configuration.rabbit.impl;
 
 
 import com.telegram_wb.service.DocumentService;
 import com.telegram_wb.service.CommandService;
-import com.telegram_wb.service.UpdateConsumer;
+import com.telegram_wb.configuration.rabbit.UpdateConsumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -32,6 +32,6 @@ public class UpdateConsumerImpl implements UpdateConsumer {
     @RabbitListener(queues = TEXT_MESSAGE)
     public void consumeTextUpdate(Update update) {
         log.info("text message received by the node from Rabbit");
-        commandService.processText(update);
+        commandService.processCommand(update);
     }
 }

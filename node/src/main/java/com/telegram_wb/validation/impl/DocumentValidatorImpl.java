@@ -12,8 +12,11 @@ import org.springframework.stereotype.Component;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 
 import static com.telegram_wb.enums.TypeOfDocument.*;
+import static com.telegram_wb.util.constants.DataDocumentConstants.*;
+import static com.telegram_wb.util.constants.SKUDocumentConstants.*;
 
 @Component
 @Slf4j
@@ -54,35 +57,31 @@ public class DocumentValidatorImpl implements DocumentValidator {
         if (!allCellsAreStrings(firstRow)) {
             return false;
         }
-        String cell0 = firstRow.getCell(0).getStringCellValue();
-        String cell1 = firstRow.getCell(1).getStringCellValue();
-        String cell2 = firstRow.getCell(2).getStringCellValue();
-        String cell3 = firstRow.getCell(3).getStringCellValue();
+        String cell0 = firstRow.getCell(SKU_DOC_CELL_INDEX_WITH_BARCODE).getStringCellValue();
+        String cell1 = firstRow.getCell(SKU_DOC_CELL_INDEX_WITH_GOODS).getStringCellValue();
+        String cell2 = firstRow.getCell(SKU_DOC_CELL_INDEX_WITH_WB_SKU).getStringCellValue();
+        String cell3 = firstRow.getCell(SKU_DOC_CELL_INDEX_WITH_EXPIRY_DATE).getStringCellValue();
         Row secondRow = sheet.getRow(1);
         String cell4 = secondRow.getCell(2).getStringCellValue();
-        return Objects.equals(cell0, "баркод товара") &&
-                Objects.equals(cell1, "кол-во товаров") &&
-                Objects.equals(cell2, "шк короба") &&
-                Objects.equals(cell3, "срок годности") &&
+        return Objects.equals(cell0, SKU_DOC_HEADER_WITH_BARCODE) &&
+                Objects.equals(cell1, SKU_DOC_HEADER_WITH_GOODS) &&
+                Objects.equals(cell2, SKU_DOC_HEADER_WITH_WB_SKU) &&
+                Objects.equals(cell3, SKU_DOC_HEADER_WITH_EXPIRY_DATE) &&
                 cell4.matches(pattern.pattern());
     }
 
     private boolean allCellsAreStrings(Row row) {
-        for (Cell cell : row) {
-            if (cell.getCellType() != CellType.STRING) {
-                return false;
-            }
-        }
-        return true;
+        return StreamSupport.stream(row.spliterator(), false)
+                .allMatch(cell -> cell.getCellType() == CellType.STRING);
     }
 
     private boolean isWithData(Sheet sheet) {
         //TO DO work with exceptions
         CellAddress activeCellAddress = Optional.ofNullable(getFirstActiveCell(sheet))
                 .orElseThrow(RuntimeException::new);
-        int firstRowIndex = activeCellAddress.getRow() - 1;
-        int lastRowIndex = activeCellAddress.getRow() - 1;
-        int firstActiveCellWithBarcode = activeCellAddress.getColumn() - 1;
+        int firstRowIndex = activeCellAddress.getRow();
+        int lastRowIndex = sheet.getLastRowNum();
+        int firstActiveCellWithBarcode = activeCellAddress.getColumn();
 
         for (int i = firstRowIndex; i < lastRowIndex; i++) {
             Row row = sheet.getRow(i);
@@ -94,23 +93,20 @@ public class DocumentValidatorImpl implements DocumentValidator {
     }
 
     private CellAddress getFirstActiveCell(Sheet sheet) {
-        for (Row row : sheet) {
-            for (Cell cell : row) {
-                if (cell.getCellType() != CellType.BLANK) {
-                    return cell.getAddress();
-                }
-            }
-        }
-        return null;
+        Optional<Cell> firstActiveCell = StreamSupport.stream(sheet.spliterator(), false)
+                .flatMap(row -> StreamSupport.stream(row.spliterator(), false))
+                .filter(cell -> cell.getCellType() != CellType.BLANK)
+                .findFirst();
+        return firstActiveCell.map(Cell::getAddress).orElse(null);
     }
 
     private boolean isWithDataFormat(Row row, int firstActiveCellIndex) {
         if (row.getPhysicalNumberOfCells() != ACTIVE_DATA_CELLS) {
             return false;
         }
-        int cellWithQuantityPerCarton = firstActiveCellIndex + 1;
-        int cellWithNumberOfCartons = firstActiveCellIndex + 2;
-        int cellWithExpiryDate = firstActiveCellIndex + 3;
+        int cellWithQuantityPerCarton = firstActiveCellIndex + DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON;
+        int cellWithNumberOfCartons = firstActiveCellIndex + DATA_CELL_WITH_NUMBER_OF_CARTONS;
+        int cellWithExpiryDate = firstActiveCellIndex + DATA_CELL_WITH_DATA_OF_EXPIRY;
         return row.getCell(cellWithQuantityPerCarton).getCellType().equals(CellType.NUMERIC) &&
                 row.getCell(cellWithNumberOfCartons).getCellType().equals(CellType.NUMERIC) &&
                 DateUtil.isCellDateFormatted(row.getCell(cellWithExpiryDate));

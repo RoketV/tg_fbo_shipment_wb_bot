@@ -7,5 +7,4 @@ public interface MessageUtil {
 
     SendMessage sendMessage(Update update, String text);
 
-    SendMessage sendMessage(String chatId, String text);
 }

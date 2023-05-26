@@ -7,7 +7,7 @@ import com.telegram_wb.exceptions.InitialDocumentNotFound;
 import com.telegram_wb.mapper.WorkbookMapper;
 import com.telegram_wb.model.BinaryContent;
 import com.telegram_wb.model.Document;
-import com.telegram_wb.service.AnswerProducer;
+import com.telegram_wb.configuration.rabbit.AnswerProducer;
 import com.telegram_wb.service.DocumentService;
 import com.telegram_wb.util.MessageUtil;
 import com.telegram_wb.util.WorkbookMerger;
@@ -68,27 +68,28 @@ public class DocumentServiceImpl implements DocumentService {
         if (response.getStatusCode().is2xxSuccessful()) {
             URL url = getFileURLFromResponse(response);
             byte[] fileBytes = getFileByteArray(url);
-            String chatId = message.getChatId().toString();
             TypeOfDocument type = documentValidator.getDocumentType(fileBytes);
             switch (type) {
-                case INITIAL_DOCUMENT_WITH_SKU -> processInitialDocument(fileBytes, chatId);
-                case DOCUMENT_WITH_DATA -> processDocumentWithData(fileBytes, chatId);
+                case INITIAL_DOCUMENT_WITH_SKU -> processInitialDocument(fileBytes, update);
+                case DOCUMENT_WITH_DATA -> processDocumentWithData(fileBytes, update);
                 case NOT_VALID_DOCUMENT -> handleNotValidDocument(update);
             }
         }
     }
 
-    private void processInitialDocument(byte[] fileBytes, String chatId) {
+    private void processInitialDocument(byte[] fileBytes, Update update) {
+        String chatId = update.getMessage().getChatId().toString();
         BinaryContent binaryContent = new BinaryContent(fileBytes);
         Document document = new Document(binaryContent,
                 false, LocalDateTime.now(), chatId);
         documentJpa.save(document);
-        SendMessage sendMessage = messageUtilImpl.sendMessage(chatId, INITIAL_DOCUMENT_WITH_SKU_SAVED);
+        SendMessage sendMessage = messageUtilImpl.sendMessage(update, INITIAL_DOCUMENT_WITH_SKU_SAVED);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
-    private void processDocumentWithData(byte[] fileBytes, String chatId) {
+    private void processDocumentWithData(byte[] fileBytes, Update update) {
         try {
+            String chatId = update.getMessage().getChatId().toString();
             Workbook workbook = parseDocumentWithData(fileBytes, chatId);
             byte[] workbookBytes = workbookMapper.toFileBites(workbook);
             DocumentDto documentDto = new DocumentDto(chatId, workbookBytes, NEW_PROCESSED_DOCUMENT_NAME);
@@ -97,7 +98,7 @@ public class DocumentServiceImpl implements DocumentService {
             Document document = new Document(binaryContent, true, LocalDateTime.now(), chatId);
             documentJpa.save(document);
         } catch (InitialDocumentNotFound e) {
-            handleInitialDocumentNotFound(chatId);
+            handleInitialDocumentNotFound(update);
         }
     }
 
@@ -106,8 +107,8 @@ public class DocumentServiceImpl implements DocumentService {
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 
-    private void handleInitialDocumentNotFound(String chatId) {
-        SendMessage sendMessage = messageUtilImpl.sendMessage(chatId, INITIAL_DOCUMENT_NOT_FOUND);
+    private void handleInitialDocumentNotFound(Update update) {
+        SendMessage sendMessage = messageUtilImpl.sendMessage(update, INITIAL_DOCUMENT_NOT_FOUND);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 

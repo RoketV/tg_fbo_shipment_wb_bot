@@ -15,12 +15,4 @@ public class MessageUtilImpl implements MessageUtil {
                 .text(text)
                 .build();
     }
-
-    @Override
-    public SendMessage sendMessage(String chatId, String text) {
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text(text)
-                .build();
-    }
 }

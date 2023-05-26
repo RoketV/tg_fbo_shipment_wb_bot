@@ -1,4 +1,4 @@
-package com.telegram_wb.configuration;
+package com.telegram_wb.configuration.rabbit;
 
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;

@@ -2,7 +2,7 @@ package com.telegram_wb.service;
 
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-public interface CommandService {
+public interface TextService {
 
-    void processCommand(Update update);
+    void processText(Update update);
 }

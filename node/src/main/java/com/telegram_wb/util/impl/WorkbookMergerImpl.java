@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import static org.apache.poi.ss.usermodel.Row.MissingCellPolicy.CREATE_NULL_AS_BLANK;
 
@@ -28,12 +29,10 @@ public class WorkbookMergerImpl implements WorkbookMerger {
                 int firstActiveCellIndex = findActiveCell(row);
                 int rowsToFill = (int) row.getCell(firstActiveCellIndex + CELL_WITH_ROWS_TO_FILL_INDEX)
                         .getNumericCellValue() + initialSheetRowIndex;
-                for (int i = initialSheetRowIndex; i <= rowsToFill; i++) {
-                    if (initialSheet.getRow(i) == null) {
-                        break;
-                    }
-                    mergeRows(initialSheet.getRow(i), row, cellStyle);
-                }
+
+                IntStream.rangeClosed(initialSheetRowIndex, rowsToFill)
+                        .takeWhile(i -> initialSheet.getRow(i) == null)
+                        .forEach(i -> mergeRows(initialSheet.getRow(i), row, cellStyle));
                 initialSheetRowIndex = rowsToFill;
             }
         }

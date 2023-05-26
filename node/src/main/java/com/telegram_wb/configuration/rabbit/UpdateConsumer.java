@@ -1,4 +1,4 @@
-package com.telegram_wb.service;
+package com.telegram_wb.configuration.rabbit;
 
 import org.telegram.telegrambots.meta.api.objects.Update;
 
