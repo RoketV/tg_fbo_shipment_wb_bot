@@ -5,9 +5,15 @@ import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
+import static com.telegram_wb.util.constants.DataDocumentConstants.DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON;
+import static com.telegram_wb.util.constants.DataDocumentConstants.DATA_CELL_WITH_DATA_OF_EXPIRY;
+import static com.telegram_wb.util.constants.SKUDocumentConstants.*;
 import static org.apache.poi.ss.usermodel.Row.MissingCellPolicy.CREATE_NULL_AS_BLANK;
 
 @Component
@@ -25,17 +31,15 @@ public class WorkbookMergerImpl implements WorkbookMerger {
         CellStyle cellStyle = createDateCellStyle(initial);
         int initialSheetRowIndex = 1;
         for (Row row : sheetWithData) {
-            if (row != null) {
                 int firstActiveCellIndex = findActiveCell(row);
-                int rowsToFill = (int) row.getCell(firstActiveCellIndex + CELL_WITH_ROWS_TO_FILL_INDEX)
+                int lastRowToFillIndex = (int) row.getCell(firstActiveCellIndex + CELL_WITH_ROWS_TO_FILL_INDEX)
                         .getNumericCellValue() + initialSheetRowIndex;
 
-                IntStream.rangeClosed(initialSheetRowIndex, rowsToFill)
+                IntStream.rangeClosed(initialSheetRowIndex, lastRowToFillIndex)
                         .takeWhile(i -> initialSheet.getRow(i) == null)
                         .forEach(i -> mergeRows(initialSheet.getRow(i), row, cellStyle));
-                initialSheetRowIndex = rowsToFill;
+                initialSheetRowIndex = lastRowToFillIndex;
             }
-        }
         setColumnSize(initial);
         return initial;
     }
@@ -49,11 +53,12 @@ public class WorkbookMergerImpl implements WorkbookMerger {
     }
 
     private void mergeRows(Row initialRow, Row rowWithData, CellStyle dateCellStyle) {
-        Cell cell = initialRow.getCell(2);
-        if (cell == null) {
+        //TODO properly validation
+        Cell cellWithWBSku = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_WB_SKU);
+        if (cellWithWBSku == null) {
             return;
         }
-        String wbBarcode = cell.getStringCellValue();
+        String wbBarcode = cellWithWBSku.getStringCellValue();
         if (!wbBarcode.matches(pattern.pattern())) {
             return;
         }
@@ -62,11 +67,12 @@ public class WorkbookMergerImpl implements WorkbookMerger {
             return;
         }
         long barcode = (long) rowWithData.getCell(firstActiveCellIndex).getNumericCellValue();
-        initialRow.getCell(0, CREATE_NULL_AS_BLANK).setCellValue(barcode);
-        int numberOfGoods = (int) rowWithData.getCell(firstActiveCellIndex + 1).getNumericCellValue();
-        initialRow.getCell(1, CREATE_NULL_AS_BLANK).setCellValue(numberOfGoods);
-        Date expiryDate = rowWithData.getCell(firstActiveCellIndex + 2).getDateCellValue();
-        Cell date = initialRow.getCell(3, CREATE_NULL_AS_BLANK);
+        initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_BARCODE, CREATE_NULL_AS_BLANK).setCellValue(barcode);
+        int numberOfGoods = (int) rowWithData.getCell(firstActiveCellIndex + DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON)
+                .getNumericCellValue();
+        initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_GOODS, CREATE_NULL_AS_BLANK).setCellValue(numberOfGoods);
+        Date expiryDate = rowWithData.getCell(firstActiveCellIndex + DATA_CELL_WITH_DATA_OF_EXPIRY).getDateCellValue();
+        Cell date = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_EXPIRY_DATE, CREATE_NULL_AS_BLANK);
         date.setCellValue(expiryDate);
         date.setCellStyle(dateCellStyle);
     }
@@ -81,11 +87,10 @@ public class WorkbookMergerImpl implements WorkbookMerger {
     }
 
     private int findActiveCell(Row row) {
-        for (Cell cell : row) {
-            if (cell != null) {
-                return cell.getAddress().getColumn();
-            }
-        }
-        return -1;
+        Optional<Cell> cellOptional = StreamSupport.stream(row.spliterator(), false)
+                .filter(Objects::nonNull)
+                .findFirst();
+
+        return cellOptional.map(cell -> cell.getAddress().getColumn()).orElse(-1);
     }
 }

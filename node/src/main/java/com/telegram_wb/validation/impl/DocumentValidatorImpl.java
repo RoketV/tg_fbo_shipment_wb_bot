@@ -76,7 +76,7 @@ public class DocumentValidatorImpl implements DocumentValidator {
     }
 
     private boolean isWithData(Sheet sheet) {
-        //TO DO work with exceptions
+        //TODO work with exceptions
         CellAddress activeCellAddress = Optional.ofNullable(getFirstActiveCell(sheet))
                 .orElseThrow(RuntimeException::new);
         int firstRowIndex = activeCellAddress.getRow();
