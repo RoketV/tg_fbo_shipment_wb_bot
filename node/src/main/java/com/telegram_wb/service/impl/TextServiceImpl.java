@@ -2,8 +2,10 @@ package com.telegram_wb.service.impl;
 
 import com.telegram_wb.configuration.rabbit.AnswerProducer;
 import com.telegram_wb.dao.DocumentJpa;
+import com.telegram_wb.dto.DocumentDto;
 import com.telegram_wb.exceptions.InitialDocumentNotFound;
 import com.telegram_wb.mapper.WorkbookMapper;
+import com.telegram_wb.model.BinaryContent;
 import com.telegram_wb.model.Document;
 import com.telegram_wb.service.TextService;
 import com.telegram_wb.util.MessageUtil;
@@ -14,17 +16,22 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
+import static com.telegram_wb.documentNames.DocumentNames.NEW_PROCESSED_DOCUMENT_NAME;
 import static com.telegram_wb.messages.AnswerConstants.DOCUMENT_NOT_FOUND_IN_DB;
 import static com.telegram_wb.messages.AnswerConstants.ERROR_COMMAND;
+import static com.telegram_wb.rabbitmq.RabbitQueues.DOCUMENT_ANSWER;
 import static com.telegram_wb.rabbitmq.RabbitQueues.TEXT_ANSWER;
-import static com.telegram_wb.util.constants.DataDocumentConstants.DATA_CELL_BARCODE_INDEX;
-import static com.telegram_wb.util.constants.DataDocumentConstants.DATA_CELL_WITH_NUMBER_OF_CARTONS;
-import static com.telegram_wb.util.constants.SKUDocumentConstants.SKU_DOC_CELL_INDEX_WITH_BARCODE;
-import static com.telegram_wb.util.constants.SKUDocumentConstants.SKU_DOC_CELL_INDEX_WITH_WB_SKU;
+import static com.telegram_wb.util.constants.DataDocumentConstants.*;
+import static com.telegram_wb.util.constants.SKUDocumentConstants.*;
+import static org.apache.poi.ss.usermodel.Row.MissingCellPolicy.CREATE_NULL_AS_BLANK;
 
 @Component
 @Slf4j
@@ -36,6 +43,7 @@ public class TextServiceImpl implements TextService {
     private final DocumentJpa documentJpa;
     private final WorkbookMapper workbookMapper;
     private final Pattern pattern = Pattern.compile("^WB_\\d{10}$");
+    private final SimpleDateFormat dateFormatter = new SimpleDateFormat("dd.MM.yyyy");
 
     @Override
     public void processText(Update update) {
@@ -45,22 +53,36 @@ public class TextServiceImpl implements TextService {
             return;
         }
         try {
-            fillDocumentWithTextData(update);
+            Document document = fillDocumentWithTextData(update);
+            sendProcessedDocument(document);
         } catch (InitialDocumentNotFound e) {
             sendNotFoundMessage(update);
         }
     }
 
-    private void fillDocumentWithTextData(Update update) throws InitialDocumentNotFound {
+    private Document fillDocumentWithTextData(Update update) throws InitialDocumentNotFound {
         String chatId = update.getMessage().getChatId().toString();
         Document document = documentJpa.getLatestRawDocument(chatId)
                 .orElseThrow(() -> new InitialDocumentNotFound("initial document with SKU was not found"));
         byte[] fileBytes = document.getBinaryContent().getContent();
-        Workbook workbook = workbookMapper.createWorkbook(fileBytes);
-        fillWorkbookWithTextData(workbook, update);
+        Workbook initialWorkbook = workbookMapper.createWorkbook(fileBytes);
+        fillWorkbookWithTextData(initialWorkbook, update);
+        fileBytes = workbookMapper.toFileBites(initialWorkbook);
+        BinaryContent binaryContent = new BinaryContent(fileBytes);
+        Document processedDocument = new Document(binaryContent, true, LocalDateTime.now(), chatId);
+        documentJpa.save(processedDocument);
+        return processedDocument;
+    }
+
+    private void sendProcessedDocument(Document document) {
+        byte[] fileBytes = document.getBinaryContent().getContent();
+        String chatId = document.getChatId();
+        DocumentDto documentDto = new DocumentDto(chatId, fileBytes, NEW_PROCESSED_DOCUMENT_NAME);
+        answerProducer.produce(DOCUMENT_ANSWER, documentDto);
     }
 
     private void fillWorkbookWithTextData(Workbook workbook, Update update) {
+        //TODO problems with indexes while parsing
         String text = update.getMessage().getText();
         Sheet initialSheet = workbook.getSheetAt(0);
         String[] textRows = text.split("\n");
@@ -68,14 +90,17 @@ public class TextServiceImpl implements TextService {
         int initialSheetRowIndex = 1;
         for (String textRow : textRows) {
             String[] data = textRow.split(" ");
-            int lastRowToFillIndex = initialSheetRowIndex + Integer.parseInt(data[DATA_CELL_WITH_NUMBER_OF_CARTONS]);
+            int lastRowToFillIndex = initialSheetRowIndex
+                    + Integer.parseInt(data[DATA_CELL_WITH_NUMBER_OF_CARTONS]) - 1; // problem is here
             IntStream.rangeClosed(initialSheetRowIndex, lastRowToFillIndex)
                     .takeWhile(i -> initialSheet.getRow(i) != null)
                     .forEach(i -> mergeRowWithText(initialSheet.getRow(i), data, cellStyle));
+            initialSheetRowIndex = lastRowToFillIndex; // or here
         }
     }
 
     private void mergeRowWithText(Row initialRow, String[] data, CellStyle cellStyle) {
+        //TODO if date format is wrong - send message to client
         Cell cellWithWBSku = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_WB_SKU);
         if (cellWithWBSku == null) {
             return;
@@ -84,10 +109,21 @@ public class TextServiceImpl implements TextService {
         if (!wbBarcode.matches(pattern.pattern())) {
             return;
         }
-        Cell cellWithBarcode = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_BARCODE,
-                Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+        Cell cellWithBarcode = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_BARCODE, CREATE_NULL_AS_BLANK);
         cellWithBarcode.setCellValue(data[DATA_CELL_BARCODE_INDEX]);
 
+        Cell quantityOfGoods = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_GOODS, CREATE_NULL_AS_BLANK);
+        quantityOfGoods.setCellValue(data[DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON]);
+
+        try {
+            Cell date = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_EXPIRY_DATE, CREATE_NULL_AS_BLANK);
+            Date expiryDate = dateFormatter.parse(data[DATA_CELL_WITH_DATA_OF_EXPIRY]);
+            date.setCellValue(expiryDate);
+            date.setCellStyle(cellStyle);
+        } catch (ParseException e) {
+            log.debug("Although row must be validated for the correct date format, " +
+                    "method mergeRowWithText threw a ParseException");
+        }
     }
 
     private CellStyle createDateCellStyle(Workbook workbook) {
@@ -101,13 +137,22 @@ public class TextServiceImpl implements TextService {
     }
 
     private boolean textIsValid(String text) {
-        return Arrays.stream(text.split("\b")).allMatch(this::rowIsValid);
+        return Arrays.stream(text.split("\n")).allMatch(this::rowIsValid);
     }
 
     private boolean rowIsValid(String row) {
         String[] data = row.split(" ");
-        return data.length == 4 && Arrays.stream(data, 1, data.length)
-                .allMatch(s -> s.matches("\\d+"));
+        if (data.length != 4) {
+            return false;
+        }
+        try {
+            dateFormatter.parse(data[DATA_CELL_WITH_DATA_OF_EXPIRY]);
+            return data[DATA_CELL_WITH_NUMBER_OF_CARTONS].matches("\\d+")
+                    && data[DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON].matches("\\d+");
+        } catch (ParseException e) {
+            return false;
+        }
+
     }
 
     private void sendErrorCommandMessage(Update update) {
