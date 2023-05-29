@@ -19,14 +19,12 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static com.telegram_wb.documentNames.DocumentNames.NEW_PROCESSED_DOCUMENT_NAME;
-import static com.telegram_wb.messages.AnswerConstants.DOCUMENT_NOT_FOUND_IN_DB;
-import static com.telegram_wb.messages.AnswerConstants.ERROR_COMMAND;
+import static com.telegram_wb.messages.AnswerConstants.*;
 import static com.telegram_wb.rabbitmq.RabbitQueues.DOCUMENT_ANSWER;
 import static com.telegram_wb.rabbitmq.RabbitQueues.TEXT_ANSWER;
 import static com.telegram_wb.util.constants.DataDocumentConstants.*;
@@ -48,9 +46,13 @@ public class TextServiceImpl implements TextService {
     @Override
     public void processText(Update update) {
         String text = update.getMessage().getText();
-        if (!textIsValid(text)) {
-            sendErrorCommandMessage(update);
-            return;
+        try {
+            if (!textIsValid(text)) {
+                sendErrorCommandMessage(update);
+                return;
+            }
+        } catch (ParseException e) {
+            sendNotValidDateFormatMessage(update);
         }
         try {
             Document document = fillDocumentWithTextData(update);
@@ -82,7 +84,6 @@ public class TextServiceImpl implements TextService {
     }
 
     private void fillWorkbookWithTextData(Workbook workbook, Update update) {
-        //TODO problems with indexes while parsing
         String text = update.getMessage().getText();
         Sheet initialSheet = workbook.getSheetAt(0);
         String[] textRows = text.split("\n");
@@ -91,11 +92,11 @@ public class TextServiceImpl implements TextService {
         for (String textRow : textRows) {
             String[] data = textRow.split(" ");
             int lastRowToFillIndex = initialSheetRowIndex
-                    + Integer.parseInt(data[DATA_CELL_WITH_NUMBER_OF_CARTONS]) - 1; // problem is here
+                    + Integer.parseInt(data[DATA_CELL_WITH_NUMBER_OF_CARTONS]) - 1;
             IntStream.rangeClosed(initialSheetRowIndex, lastRowToFillIndex)
                     .takeWhile(i -> initialSheet.getRow(i) != null)
                     .forEach(i -> mergeRowWithText(initialSheet.getRow(i), data, cellStyle));
-            initialSheetRowIndex = lastRowToFillIndex; // or here
+            initialSheetRowIndex = lastRowToFillIndex + 1;
         }
     }
 
@@ -136,23 +137,24 @@ public class TextServiceImpl implements TextService {
         return cellStyle;
     }
 
-    private boolean textIsValid(String text) {
-        return Arrays.stream(text.split("\n")).allMatch(this::rowIsValid);
+    private boolean textIsValid(String text) throws ParseException {
+        String[] rows = text.split("\n");
+        for (String row : rows) {
+            if (!rowIsValid(row)) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    private boolean rowIsValid(String row) {
+    private boolean rowIsValid(String row) throws ParseException {
         String[] data = row.split(" ");
         if (data.length != 4) {
             return false;
         }
-        try {
             dateFormatter.parse(data[DATA_CELL_WITH_DATA_OF_EXPIRY]);
             return data[DATA_CELL_WITH_NUMBER_OF_CARTONS].matches("\\d+")
                     && data[DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON].matches("\\d+");
-        } catch (ParseException e) {
-            return false;
-        }
-
     }
 
     private void sendErrorCommandMessage(Update update) {
@@ -162,6 +164,11 @@ public class TextServiceImpl implements TextService {
 
     private void sendNotFoundMessage(Update update) {
         SendMessage sendMessage = messageUtil.sendMessage(update, DOCUMENT_NOT_FOUND_IN_DB);
+        answerProducer.produce(TEXT_ANSWER, sendMessage);
+    }
+
+    private void sendNotValidDateFormatMessage(Update update) {
+        SendMessage sendMessage = messageUtil.sendMessage(update, NOT_VALID_DATE_FORMAT);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
     }
 }
