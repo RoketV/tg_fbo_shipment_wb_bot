@@ -36,7 +36,7 @@ public class WorkbookMergerImpl implements WorkbookMerger {
                         .getNumericCellValue() + initialSheetRowIndex;
 
                 IntStream.rangeClosed(initialSheetRowIndex, lastRowToFillIndex)
-                        .takeWhile(i -> initialSheet.getRow(i) == null)
+                        .takeWhile(i -> initialSheet.getRow(i) != null)
                         .forEach(i -> mergeRows(initialSheet.getRow(i), row, cellStyle));
                 initialSheetRowIndex = lastRowToFillIndex;
             }
@@ -66,7 +66,9 @@ public class WorkbookMergerImpl implements WorkbookMerger {
         if (firstActiveCellIndex == -1) {
             return;
         }
-        long barcode = (long) rowWithData.getCell(firstActiveCellIndex).getNumericCellValue();
+        Cell cellWithBarcode = rowWithData.getCell(firstActiveCellIndex);
+        long barcode =  cellWithBarcode.getCellType() == CellType.NUMERIC ? (long) cellWithBarcode.getNumericCellValue()
+                : Long.parseLong(cellWithBarcode.getStringCellValue());
         initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_BARCODE, CREATE_NULL_AS_BLANK).setCellValue(barcode);
         int numberOfGoods = (int) rowWithData.getCell(firstActiveCellIndex + DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON)
                 .getNumericCellValue();

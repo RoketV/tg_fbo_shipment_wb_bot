@@ -1,5 +1,6 @@
 package com.telegram_wb.service.impl;
 
+import com.telegram_wb.configuration.rabbit.AnswerProducer;
 import com.telegram_wb.dao.DocumentJpa;
 import com.telegram_wb.dto.DocumentDto;
 import com.telegram_wb.enums.TypeOfDocument;
@@ -7,7 +8,6 @@ import com.telegram_wb.exceptions.InitialDocumentNotFound;
 import com.telegram_wb.mapper.WorkbookMapper;
 import com.telegram_wb.model.BinaryContent;
 import com.telegram_wb.model.Document;
-import com.telegram_wb.configuration.rabbit.AnswerProducer;
 import com.telegram_wb.service.DocumentService;
 import com.telegram_wb.util.MessageUtil;
 import com.telegram_wb.util.WorkbookMerger;
@@ -34,7 +34,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 import static com.telegram_wb.documentNames.DocumentNames.NEW_PROCESSED_DOCUMENT_NAME;
 import static com.telegram_wb.messages.AnswerConstants.*;
@@ -81,7 +82,7 @@ public class DocumentServiceImpl implements DocumentService {
         String chatId = update.getMessage().getChatId().toString();
         BinaryContent binaryContent = new BinaryContent(fileBytes);
         Document document = new Document(binaryContent,
-                false, LocalDateTime.now(), chatId);
+                false, ZonedDateTime.now(ZoneId.of("Europe/Moscow")), chatId);
         documentJpa.save(document);
         SendMessage sendMessage = messageUtilImpl.sendMessage(update, INITIAL_DOCUMENT_WITH_SKU_SAVED);
         answerProducer.produce(TEXT_ANSWER, sendMessage);
@@ -95,7 +96,8 @@ public class DocumentServiceImpl implements DocumentService {
             DocumentDto documentDto = new DocumentDto(chatId, workbookBytes, NEW_PROCESSED_DOCUMENT_NAME);
             answerProducer.produce(DOCUMENT_ANSWER, documentDto);
             BinaryContent binaryContent = new BinaryContent(workbookBytes);
-            Document document = new Document(binaryContent, true, LocalDateTime.now(), chatId);
+            Document document = new Document(binaryContent, true,
+                    ZonedDateTime.now(ZoneId.of("Europe/Moscow")), chatId);
             documentJpa.save(document);
         } catch (InitialDocumentNotFound e) {
             handleInitialDocumentNotFound(update);

@@ -18,7 +18,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -71,7 +72,8 @@ public class TextServiceImpl implements TextService {
         fillWorkbookWithTextData(initialWorkbook, update);
         fileBytes = workbookMapper.toFileBites(initialWorkbook);
         BinaryContent binaryContent = new BinaryContent(fileBytes);
-        Document processedDocument = new Document(binaryContent, true, LocalDateTime.now(), chatId);
+        Document processedDocument = new Document(binaryContent, true,
+                ZonedDateTime.now(ZoneId.of("Europe/Moscow")), chatId);
         documentJpa.save(processedDocument);
         return processedDocument;
     }
@@ -101,7 +103,6 @@ public class TextServiceImpl implements TextService {
     }
 
     private void mergeRowWithText(Row initialRow, String[] data, CellStyle cellStyle) {
-        //TODO if date format is wrong - send message to client
         Cell cellWithWBSku = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_WB_SKU);
         if (cellWithWBSku == null) {
             return;

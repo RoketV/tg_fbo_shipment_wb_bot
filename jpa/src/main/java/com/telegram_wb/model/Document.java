@@ -3,7 +3,7 @@ package com.telegram_wb.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Entity
 @Getter
@@ -14,7 +14,7 @@ public class Document {
     }
 
     public Document(BinaryContent binaryContent, Boolean processed,
-                    LocalDateTime timestamp, String chatId) {
+                    ZonedDateTime timestamp, String chatId) {
         this.binaryContent = binaryContent;
         this.processed = processed;
         this.timestamp = timestamp;
@@ -25,13 +25,13 @@ public class Document {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     private BinaryContent binaryContent;
 
     @Column(name = "processed")
     private Boolean processed;
 
-    private LocalDateTime timestamp;
+    private ZonedDateTime timestamp;
 
     private String chatId;
 }
