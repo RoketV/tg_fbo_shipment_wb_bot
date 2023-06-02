@@ -1,7 +1,7 @@
 # Telegram Bot for Wildberries Marketplace
 **In production till 10th of June**
 
-This Telegram bot is designed to assist sellers on the Wildberries online marketplace by simplifying the process of creating and formatting excel files for shipment arrangements. The bot offers various features to streamline the workflow and enhance the user experience. https://t.me/Wb_Fbo_Shipment_Bot
+This Telegram bot is designed to help sellers on the Wildberries online marketplace by simplifying the process of creating and formatting excel files for shipment arrangements. The bot offers various features to streamline the workflow and enhance the user experience. https://t.me/Wb_Fbo_Shipment_Bot
 
 ## Project Structure
 The project consists of four modules:
