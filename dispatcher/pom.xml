@@ -11,6 +11,14 @@
 
     <artifactId>dispatcher-t</artifactId>
 
+    <dependencies>
+        <dependency>
+            <artifactId>utils</artifactId>
+            <groupId>com.telegram_wb</groupId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
     <properties>
         <maven.compiler.source>20</maven.compiler.source>
         <maven.compiler.target>20</maven.compiler.target>
