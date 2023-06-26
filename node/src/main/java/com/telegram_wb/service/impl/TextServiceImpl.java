@@ -115,7 +115,7 @@ public class TextServiceImpl implements TextService {
         cellWithBarcode.setCellValue(data[DATA_CELL_BARCODE_INDEX]);
 
         Cell quantityOfGoods = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_GOODS, CREATE_NULL_AS_BLANK);
-        quantityOfGoods.setCellValue(data[DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON]);
+        quantityOfGoods.setCellValue(Integer.parseInt(data[DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON]));
 
         try {
             Cell date = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_EXPIRY_DATE, CREATE_NULL_AS_BLANK);
