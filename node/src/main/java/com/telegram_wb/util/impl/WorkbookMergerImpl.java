@@ -31,15 +31,15 @@ public class WorkbookMergerImpl implements WorkbookMerger {
         CellStyle cellStyle = createDateCellStyle(initial);
         int initialSheetRowIndex = 1;
         for (Row row : sheetWithData) {
-                int firstActiveCellIndex = findActiveCell(row);
-                int lastRowToFillIndex = (int) row.getCell(firstActiveCellIndex + CELL_WITH_ROWS_TO_FILL_INDEX)
-                        .getNumericCellValue() + initialSheetRowIndex;
+            int firstActiveCellIndex = findActiveCell(row);
+            int lastRowToFillIndex = (int) row.getCell(firstActiveCellIndex + CELL_WITH_ROWS_TO_FILL_INDEX)
+                    .getNumericCellValue() + initialSheetRowIndex;
 
-                IntStream.rangeClosed(initialSheetRowIndex, lastRowToFillIndex)
-                        .takeWhile(i -> initialSheet.getRow(i) != null)
-                        .forEach(i -> mergeRows(initialSheet.getRow(i), row, cellStyle));
-                initialSheetRowIndex = lastRowToFillIndex;
-            }
+            IntStream.rangeClosed(initialSheetRowIndex, lastRowToFillIndex)
+                    .takeWhile(i -> initialSheet.getRow(i) != null)
+                    .forEach(i -> mergeRows(initialSheet.getRow(i), row, cellStyle));
+            initialSheetRowIndex = lastRowToFillIndex;
+        }
         setColumnSize(initial);
         return initial;
     }
@@ -67,12 +67,14 @@ public class WorkbookMergerImpl implements WorkbookMerger {
             return;
         }
         Cell cellWithBarcode = rowWithData.getCell(firstActiveCellIndex);
-        long barcode =  cellWithBarcode.getCellType() == CellType.NUMERIC ? (long) cellWithBarcode.getNumericCellValue()
+        long barcode = cellWithBarcode.getCellType() == CellType.NUMERIC ? (long) cellWithBarcode.getNumericCellValue()
                 : Long.parseLong(cellWithBarcode.getStringCellValue());
         initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_BARCODE, CREATE_NULL_AS_BLANK).setCellValue(barcode);
         int numberOfGoods = (int) rowWithData.getCell(firstActiveCellIndex + DATA_CELL_INDEX_WITH_QUANTITY_PER_CARTON)
                 .getNumericCellValue();
-        initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_GOODS, CREATE_NULL_AS_BLANK).setCellValue(numberOfGoods);
+        Cell cellWithNumberOfGoods = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_GOODS, CREATE_NULL_AS_BLANK);
+        cellWithNumberOfGoods.setCellValue(numberOfGoods);
+        //TODO SET NUMERIC CELL style cellWithNumberOfGoods.setCellStyle();
         Date expiryDate = rowWithData.getCell(firstActiveCellIndex + DATA_CELL_WITH_DATA_OF_EXPIRY).getDateCellValue();
         Cell date = initialRow.getCell(SKU_DOC_CELL_INDEX_WITH_EXPIRY_DATE, CREATE_NULL_AS_BLANK);
         date.setCellValue(expiryDate);
