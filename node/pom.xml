@@ -40,28 +40,13 @@
 
     <build>
         <plugins>
-<!--            <plugin>-->
-<!--                <groupId>org.springframework.boot</groupId>-->
-<!--                <artifactId>spring-boot-maven-plugin</artifactId>-->
-<!--                <configuration>-->
-<!--                    <mainClass>com.telegram_wb.NodeApplication</mainClass>-->
-<!--                    <layout>JAR</layout>-->
-<!--                </configuration>-->
-<!--            </plugin>-->
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-jar-plugin</artifactId>-->
-<!--                <version>3.1.2</version>-->
-<!--                <configuration>-->
-<!--                <archive>-->
-<!--                    <manifest>-->
-<!--                        <mainClass>com.telegram_wb.NodeApplication</mainClass>>-->
-<!--                    </manifest>-->
-<!--                </archive>-->
-<!--&lt;!&ndash;                    <source>17</source> &lt;!&ndash; Java version used for compilation &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                    <target>17</target> &lt;!&ndash; Java version used for generating bytecode &ndash;&gt;&ndash;&gt;-->
-<!--                </configuration>-->
-<!--            </plugin>-->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
